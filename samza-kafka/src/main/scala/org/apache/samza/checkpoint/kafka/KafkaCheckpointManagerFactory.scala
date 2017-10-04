@@ -100,7 +100,7 @@ class KafkaCheckpointManagerFactory extends CheckpointManagerFactory with Loggin
 
     new KafkaCheckpointManager(
       clientId,
-      KafkaUtil.getCheckpointTopic(jobName, jobId, config),
+      KafkaUtil.getCheckpointTopic(jobName, jobId),
       systemName,
       kafkaConfig.getCheckpointReplicationFactor.get.toInt,
       socketTimeout,

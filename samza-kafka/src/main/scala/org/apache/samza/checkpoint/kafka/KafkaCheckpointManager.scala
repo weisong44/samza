@@ -29,7 +29,7 @@ import org.apache.samza.checkpoint.{Checkpoint, CheckpointManager}
 import org.apache.samza.container.TaskName
 import org.apache.samza.serializers.CheckpointSerde
 import org.apache.samza.system.SystemStreamMetadata.SystemStreamPartitionMetadata
-import org.apache.samza.system.{StreamSpec, SystemAdmin, _}
+import org.apache.samza.system.{SystemAdmin, _}
 import org.apache.samza.util._
 import org.apache.samza.{Partition, SamzaException}
 
@@ -270,12 +270,6 @@ class KafkaCheckpointManager(
       }
     )
 
-  }
-
-  override def clearCheckpoints = {
-    info("Clear checkpoint stream %s in system %s" format (checkpointTopic, systemName))
-    val spec = StreamSpec.createCheckpointStreamSpec(checkpointTopic, systemName)
-    systemAdmin.clearStream(spec)
   }
 
   override def toString = "KafkaCheckpointManager [systemName=%s, checkpointTopic=%s]" format(systemName, checkpointTopic)
