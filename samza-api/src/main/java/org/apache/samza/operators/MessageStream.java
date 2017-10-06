@@ -18,19 +18,20 @@
  */
 package org.apache.samza.operators;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.function.Function;
+
 import org.apache.samza.annotation.InterfaceStability;
 import org.apache.samza.operators.functions.FilterFunction;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.operators.functions.MapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.operators.functions.StreamTableJoinFunction;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowPane;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.function.Function;
 
 
 /**
@@ -138,6 +139,27 @@ public interface MessageStream<M> {
       JoinFunction<? extends K, ? super M, ? super JM, ? extends OM> joinFn, Duration ttl);
 
   /**
+   * Joins this {@link MessageStream} with another {@link RecordTable} using the provided
+   * pairwise {@link StreamTableJoinFunction}.
+   * <p>
+   * Messages are looked up from the joined table, join function is applied and join results are
+   * emitted as matches are found.
+   * <p>
+   * Both the input stream and table being joined must have the same number of partitions,
+   * and should be partitioned by the join key.
+   * <p>
+   *
+   * @param table the table being joined
+   * @param joinFn the join function
+   * @param <K> the type of the join key
+   * @param <R> the type of record in the table
+   * @param <OM> the type of the output message
+   * @return the joined {@link MessageStream}
+   */
+  <K, R, OM> MessageStream<OM> join(RecordTable<K, R> table,
+      StreamTableJoinFunction<? extends K, ? super M, ? super R, ? extends OM> joinFn);
+
+  /**
    * Merges all {@code otherStreams} with this {@link MessageStream}.
    * <p>
    * The merged stream contains messages from all streams in the order they arrive.
@@ -188,5 +210,19 @@ public interface MessageStream<M> {
    * @return the repartitioned {@link MessageStream}
    */
   <K> MessageStream<M> partitionBy(Function<? super M, ? extends K> keyExtractor);
+
+  /**
+   * Allows writing messages in this {@link MessageStream} to an {@link RecordTable}.
+   *
+   * @param table the table to write messages to
+   * @param keyExtractor the {@link Function} to extract the key from the input message
+   * @param valueExtractor the {@link Function} to extract the value from the input message
+   * @param <K> the type of key in the table
+   * @param <V> the type of record in the table
+   */
+  <K, V> void writeTo(
+      RecordTable<K, V> table,
+      Function<? super M, ? extends K> keyExtractor,
+      Function<? super M, ? extends V> valueExtractor);
 
 }

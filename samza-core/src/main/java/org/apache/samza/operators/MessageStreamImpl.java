@@ -19,26 +19,29 @@
 
 package org.apache.samza.operators;
 
+import java.time.Duration;
+import java.util.Collection;
+import java.util.function.Function;
+
 import org.apache.samza.operators.functions.FilterFunction;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.operators.functions.MapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.operators.functions.StreamTableJoinFunction;
 import org.apache.samza.operators.spec.JoinOperatorSpec;
 import org.apache.samza.operators.spec.OperatorSpec;
 import org.apache.samza.operators.spec.OperatorSpecs;
 import org.apache.samza.operators.spec.OutputOperatorSpec;
 import org.apache.samza.operators.spec.OutputStreamImpl;
-import org.apache.samza.operators.spec.StreamOperatorSpec;
 import org.apache.samza.operators.spec.SinkOperatorSpec;
+import org.apache.samza.operators.spec.StreamOperatorSpec;
+import org.apache.samza.operators.spec.StreamTableJoinOperatorSpec;
+import org.apache.samza.operators.spec.WriteToOperatorSpec;
 import org.apache.samza.operators.stream.IntermediateMessageStreamImpl;
 import org.apache.samza.operators.windows.Window;
 import org.apache.samza.operators.windows.WindowPane;
 import org.apache.samza.operators.windows.internal.WindowInternal;
-
-import java.time.Duration;
-import java.util.Collection;
-import java.util.function.Function;
 
 
 /**
@@ -123,6 +126,25 @@ public class MessageStreamImpl<M> implements MessageStream<M> {
     return new MessageStreamImpl<>(this.graph, joinOpSpec);
   }
 
+  /**
+   * TODO: wsong
+   * @param table
+   * @param joinFn
+   * @param <K>
+   * @param <R>
+   * @param <OM>
+   * @return
+   */
+  @Override
+  public <K, R, OM> MessageStream<OM> join(RecordTable<K, R> table,
+      StreamTableJoinFunction<? extends K, ? super M, ? super R, ? extends OM> joinFn) {
+    StreamTableJoinOperatorSpec<K, M, R, OM> joinOpSpec =
+        OperatorSpecs.createStreamTableJoinOperatorSpec(this.operatorSpec, table.getTableSpec(),
+            (StreamTableJoinFunction<K, M, R, OM>) joinFn, this.graph.getNextOpId());
+    this.operatorSpec.registerNextOperatorSpec(joinOpSpec);
+    return new MessageStreamImpl<>(this.graph, joinOpSpec);
+  }
+
   @Override
   public MessageStream<M> merge(Collection<? extends MessageStream<? extends M>> otherStreams) {
     StreamOperatorSpec<M, M> opSpec = OperatorSpecs.createMergeOperatorSpec(this.graph.getNextOpId());
@@ -151,4 +173,13 @@ public class MessageStreamImpl<M> implements MessageStream<M> {
   protected OperatorSpec<?, M> getOperatorSpec() {
     return this.operatorSpec;
   }
+
+  @Override
+  public <K, V> void writeTo(RecordTable<K, V> table, Function<? super M, ? extends K> keyExtractor,
+      Function<? super M, ? extends V> valueExtractor) {
+    WriteToOperatorSpec<K, V, M> op = OperatorSpecs.createWriteToOperatorSpec(table.getTableSpec(),
+        keyExtractor, valueExtractor, this.graph.getNextOpId());
+    this.operatorSpec.registerNextOperatorSpec(op);
+  }
+
 }

@@ -18,14 +18,14 @@
  */
 package org.apache.samza.operators.spec;
 
-import org.apache.samza.annotation.InterfaceStability;
-
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.apache.samza.annotation.InterfaceStability;
+
 /**
- * A stream operator specification that holds all the information required to transform 
+ * A stream operator specification that holds all the information required to transform
  * the input {@link org.apache.samza.operators.MessageStreamImpl} and produce the output
  * {@link org.apache.samza.operators.MessageStreamImpl}.
  *
@@ -42,6 +42,7 @@ public abstract class OperatorSpec<M, OM> {
     FILTER,
     SINK,
     SEND_TO,
+    WRITE_TO,
     JOIN,
     WINDOW,
     MERGE,

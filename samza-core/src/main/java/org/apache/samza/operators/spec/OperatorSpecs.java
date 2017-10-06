@@ -19,17 +19,20 @@
 
 package org.apache.samza.operators.spec;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.function.Function;
+
 import org.apache.samza.config.Config;
 import org.apache.samza.operators.functions.FilterFunction;
 import org.apache.samza.operators.functions.FlatMapFunction;
 import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.operators.functions.MapFunction;
 import org.apache.samza.operators.functions.SinkFunction;
+import org.apache.samza.operators.functions.StreamTableJoinFunction;
 import org.apache.samza.operators.windows.internal.WindowInternal;
+import org.apache.samza.table.TableSpec;
 import org.apache.samza.task.TaskContext;
-
-import java.util.ArrayList;
-import java.util.Collection;
 
 
 /**
@@ -217,4 +220,40 @@ public class OperatorSpecs {
         },
         OperatorSpec.OpCode.MERGE, opId);
   }
+
+  /**
+   * TODO: wsong
+   * @param leftInputOpSpec
+   * @param tableSpec
+   * @param joinFn
+   * @param opId
+   * @param <K>
+   * @param <M>
+   * @param <R>
+   * @param <OM>
+   * @return
+   */
+  public static <K, M, R, OM> StreamTableJoinOperatorSpec<K, M, R, OM> createStreamTableJoinOperatorSpec(
+      OperatorSpec<?, M> leftInputOpSpec, TableSpec tableSpec,
+      StreamTableJoinFunction<K, M, R, OM> joinFn, int opId) {
+    return new StreamTableJoinOperatorSpec<>(leftInputOpSpec, tableSpec, joinFn, opId);
+  }
+
+  /**
+   * TODO: wsong
+   *
+   * @param tableSpec
+   * @param keyExtractor
+   * @param valueExtractor
+   * @param opId
+   * @param <K>
+   * @param <V>
+   * @param <M>
+   * @return
+   */
+  public static <K, V, M> WriteToOperatorSpec<K, V, M> createWriteToOperatorSpec(TableSpec tableSpec,
+      Function<? super M, ? extends K> keyExtractor, Function<? super M, ? extends V> valueExtractor, int opId) {
+    return new WriteToOperatorSpec(tableSpec, keyExtractor, valueExtractor, opId);
+  }
+
 }

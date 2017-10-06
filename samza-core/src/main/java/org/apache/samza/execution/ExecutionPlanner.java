@@ -36,6 +36,7 @@ import org.apache.samza.operators.spec.JoinOperatorSpec;
 import org.apache.samza.operators.spec.OperatorSpec;
 import org.apache.samza.system.StreamSpec;
 import org.apache.samza.system.SystemStream;
+import org.apache.samza.table.TableSpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +79,7 @@ public class ExecutionPlanner {
     Set<StreamSpec> sourceStreams = new HashSet<>(streamGraph.getInputOperators().keySet());
     Set<StreamSpec> sinkStreams = new HashSet<>(streamGraph.getOutputStreams().keySet());
     Set<StreamSpec> intStreams = new HashSet<>(sourceStreams);
+    Set<TableSpec> tables = new HashSet<>(streamGraph.getRecordTables().keySet());
     intStreams.retainAll(sinkStreams);
     sourceStreams.removeAll(intStreams);
     sinkStreams.removeAll(intStreams);
@@ -95,6 +97,9 @@ public class ExecutionPlanner {
 
     // add intermediate streams
     intStreams.forEach(spec -> jobGraph.addIntermediateStream(spec, node, node));
+
+    // add tables
+    tables.forEach(spec -> jobGraph.addTable(spec, node));
 
     jobGraph.validate();
 
