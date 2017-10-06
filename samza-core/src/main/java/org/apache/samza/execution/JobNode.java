@@ -19,14 +19,18 @@
 
 package org.apache.samza.execution;
 
-import com.google.common.base.Joiner;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.samza.SamzaException;
 import org.apache.samza.config.Config;
+import org.apache.samza.config.JavaTableConfig;
 import org.apache.samza.config.JobConfig;
 import org.apache.samza.config.MapConfig;
 import org.apache.samza.config.TaskConfig;
@@ -35,9 +39,15 @@ import org.apache.samza.operators.spec.JoinOperatorSpec;
 import org.apache.samza.operators.spec.OperatorSpec;
 import org.apache.samza.operators.spec.WindowOperatorSpec;
 import org.apache.samza.operators.util.MathUtils;
+import org.apache.samza.table.TableProvider;
+import org.apache.samza.table.TableProviderFactory;
+import org.apache.samza.table.TableSpec;
 import org.apache.samza.util.Util;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Joiner;
 
 
 /**
@@ -56,6 +66,7 @@ public class JobNode {
   private final StreamGraphImpl streamGraph;
   private final List<StreamEdge> inEdges = new ArrayList<>();
   private final List<StreamEdge> outEdges = new ArrayList<>();
+  private final List<TableSpec> tables = new ArrayList<>();
   private final Config config;
 
   JobNode(String jobName, String jobId, StreamGraphImpl streamGraph, Config config) {
@@ -98,6 +109,10 @@ public class JobNode {
     return outEdges;
   }
 
+  void addTable(TableSpec tableSpec) {
+    tables.add(tableSpec);
+  }
+
   /**
    * Generate the configs for a job
    * @param executionPlanJson JSON representation of the execution plan
@@ -125,6 +140,27 @@ public class JobNode {
     // write input/output streams to configs
     inEdges.stream().filter(StreamEdge::isIntermediate).forEach(edge -> configs.putAll(edge.generateConfig()));
 
+    ObjectMapper mapper = new ObjectMapper();
+    JobGraphJsonGenerator generator = new JobGraphJsonGenerator();
+    tables.forEach(tableSpec -> {
+        JobGraphJsonGenerator.TableSpecJson tableSpecJson = generator.buildTableJson(tableSpec);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+          mapper.writeValue(out, tableSpecJson);
+        } catch (IOException ex) {
+          throw new SamzaException("Failed to serialize table spec " + tableSpec.getId(), ex);
+        }
+
+        configs.put(String.format(JavaTableConfig.TABLE_SPEC, tableSpec.getId()), new String(out.toByteArray()));
+        configs.put(String.format(JavaTableConfig.TABLE_PROVIDER_FACTORY, tableSpec.getId()),
+            tableSpec.getTableProviderFactory());
+
+        // Generate additional configuration
+        TableProviderFactory tableProviderFactory = Util.getObj(tableSpec.getTableProviderFactory());
+        TableProvider tableProvider = tableProviderFactory.getTableProvider(tableSpec);
+        configs.putAll(tableProvider.generateConfig());
+      });
+
     log.info("Job {} has generated configs {}", jobName, configs);
 
     String configPrefix = String.format(CONFIG_JOB_PREFIX, jobName);
@@ -147,9 +183,13 @@ public class JobNode {
 
     // Filter out the join operators, and obtain a list of their ttl values
     List<Long> joinTtlIntervals = operatorSpecs.stream()
-        .filter(spec -> spec.getOpCode() == OperatorSpec.OpCode.JOIN)
+        .filter(spec -> spec instanceof JoinOperatorSpec)
         .map(spec -> ((JoinOperatorSpec) spec).getTtlMs())
         .collect(Collectors.toList());
+
+    if (joinTtlIntervals.isEmpty()) {
+      return -1;
+    }
 
     // Combine both the above lists
     List<Long> candidateTimerIntervals = new ArrayList<>(joinTtlIntervals);

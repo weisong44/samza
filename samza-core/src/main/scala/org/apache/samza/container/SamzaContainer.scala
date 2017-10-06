@@ -66,6 +66,7 @@ import org.apache.samza.system.SystemStreamPartition
 import org.apache.samza.system.chooser.DefaultChooser
 import org.apache.samza.system.chooser.MessageChooserFactory
 import org.apache.samza.system.chooser.RoundRobinChooserFactory
+import org.apache.samza.table.TableManager
 import org.apache.samza.task._
 import org.apache.samza.util.HighResolutionClock
 import org.apache.samza.util.ExponentialSleepStrategy
@@ -539,6 +540,8 @@ object SamzaContainer extends Logging {
         new StorageConfig(config).getChangeLogDeleteRetentionsInMs,
         new SystemClock)
 
+      val tableManager = new TableManager(config, taskStores.asJava)
+
       val systemStreamPartitions = taskModel
         .getSystemStreamPartitions
         .asScala
@@ -557,6 +560,7 @@ object SamzaContainer extends Logging {
           containerContext = containerContext,
           offsetManager = offsetManager,
           storageManager = storageManager,
+          tableManager = tableManager,
           reporters = reporters,
           systemStreamPartitions = systemStreamPartitions,
           exceptionHandler = TaskInstanceExceptionHandler(taskInstanceMetrics, config),
@@ -682,6 +686,7 @@ class SamzaContainer(
       startOffsetManager
       startLocalityManager
       startStores
+      startTableManager
       startDiskSpaceMonitor
       startHostStatisticsMonitor
       startProducers
@@ -869,6 +874,10 @@ class SamzaContainer(
     })
   }
 
+  def startTableManager: Unit = {
+    taskInstances.values.foreach(_.startTableManager)
+  }
+
   def startTask {
     info("Initializing stream tasks.")
 
@@ -970,6 +979,12 @@ class SamzaContainer(
     info("Shutting down task instance stores.")
 
     taskInstances.values.foreach(_.shutdownStores)
+  }
+
+  def shutdownTableManager: Unit = {
+    info("Shutting down task instance table manager.")
+
+    taskInstances.values.foreach(_.shutdownTableManager)
   }
 
   def shutdownLocalityManager {

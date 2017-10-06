@@ -18,7 +18,12 @@
  */
 package org.apache.samza.operators;
 
-import junit.framework.Assert;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 import org.apache.samza.config.Config;
 import org.apache.samza.config.JobConfig;
 import org.apache.samza.operators.data.TestMessageEnvelope;
@@ -28,12 +33,10 @@ import org.apache.samza.operators.spec.OutputStreamImpl;
 import org.apache.samza.operators.stream.IntermediateMessageStreamImpl;
 import org.apache.samza.runtime.ApplicationRunner;
 import org.apache.samza.system.StreamSpec;
+import org.apache.samza.table.TableSpec;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import junit.framework.Assert;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -208,5 +211,17 @@ public class TestStreamGraphImpl {
     Assert.assertEquals(inputSpecs.get(0).getStreamSpec(), testStreamSpec1);
     Assert.assertEquals(inputSpecs.get(1).getStreamSpec(), testStreamSpec2);
     Assert.assertEquals(inputSpecs.get(2).getStreamSpec(), testStreamSpec3);
+  }
+
+  @Test
+  public void testGetRecordTable() {
+    ApplicationRunner mockRunner = mock(ApplicationRunner.class);
+    Config mockConfig = mock(Config.class);
+    StreamGraphImpl graph = new StreamGraphImpl(mockRunner, mockConfig);
+
+    TableDescriptor mockTableDescriptor = mock(TableDescriptor.class);
+    when(mockTableDescriptor.getTableSpec()).thenReturn(
+        new TableSpec("t1", "", new HashMap<>()));
+    Assert.assertNotNull(graph.getRecordTable(mockTableDescriptor));
   }
 }

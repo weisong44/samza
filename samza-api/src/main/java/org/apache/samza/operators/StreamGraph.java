@@ -18,10 +18,10 @@
  */
 package org.apache.samza.operators;
 
-import org.apache.samza.annotation.InterfaceStability;
-
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import org.apache.samza.annotation.InterfaceStability;
 
 /**
  * Provides access to {@link MessageStream}s and {@link OutputStream}s used to describe the processing logic.
@@ -61,6 +61,19 @@ public interface StreamGraph {
    */
   <K, V, M> OutputStream<K, V, M> getOutputStream(String streamId,
       Function<? super M, ? extends K> keyExtractor, Function<? super M, ? extends V> msgExtractor);
+
+  /**
+   * Gets the {@link RecordTable} corresponding to the {@link TableDescriptor}.
+   * <p>
+   * Multiple invocations of this method with the same {@code streamId} will throw an {@link IllegalStateException}.
+   *
+   * @param tableDesc the {@link TableDescriptor}
+   * @param <K> the type of the key
+   * @param <V> the type of the value
+   * @return the {@link RecordTable}
+   * @throws IllegalStateException when invoked multiple times with the same {@link TableDescriptor}
+   */
+  <K, V> RecordTable<K, V> getRecordTable(TableDescriptor<K, V, ?> tableDesc);
 
   /**
    * Sets the {@link ContextManager} for this {@link StreamGraph}.
