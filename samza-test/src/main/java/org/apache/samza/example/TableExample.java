@@ -30,6 +30,8 @@ import org.apache.samza.config.JobCoordinatorConfig;
 import org.apache.samza.config.MapConfig;
 import org.apache.samza.config.TaskConfig;
 import org.apache.samza.container.grouper.task.SingleContainerGrouperFactory;
+import org.apache.samza.coordinator.CoordinationUtils;
+import org.apache.samza.coordinator.CoordinationUtilsFactory;
 import org.apache.samza.operators.RecordTable;
 import org.apache.samza.operators.functions.JoinFunction;
 import org.apache.samza.operators.functions.StreamTableJoinFunction;
@@ -216,6 +218,14 @@ public class TableExample {
       new Profile(5, "MSFT"),
       new Profile(6, "GOOG")
   };
+
+
+  static public class PassthroughCoordinationUtilsFactory implements CoordinationUtilsFactory {
+    @Override
+    public CoordinationUtils getCoordinationUtils(String groupId, String participantId, Config updatedConfig) {
+      return null;
+    }
+  }
 
   public static void main(String[] args) throws Exception {
     Map<String, String> configs = new HashMap<>();
